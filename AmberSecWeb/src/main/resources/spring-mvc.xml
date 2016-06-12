@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:mvc="http://www.springframework.org/schema/mvc"
+	   xmlns:util="http://www.springframework.org/schema/util"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd
+		http://www.springframework.org/schema/util  http://www.springframework.org/schema/util/spring-util-4.0.xsd
+		http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd">
+    
+    <description>Spring MVC Configuration</description>
+    
+	<context:property-placeholder ignore-unresolvable="true" location="classpath:ambersec.properties" />
+	
+	<!-- only scanning @Controller -->
+	<context:component-scan base-package="com.ambersec" use-default-filters="false">
+		<context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+	</context:component-scan>
+
+	<mvc:annotation-driven>
+		<mvc:message-converters>
+			<ref bean="stringHttpMessageConverter" />
+			<ref bean="fastJsonHttpMessageConverter" />
+			<ref bean="marshallingHttpMessageConverter" />
+		</mvc:message-converters>
+	</mvc:annotation-driven>
+	<bean id="stringHttpMessageConverter"
+		  class="org.springframework.http.converter.StringHttpMessageConverter">
+		<constructor-arg value="UTF-8" index="0"></constructor-arg><!--
+            避免出现乱码 -->
+		<property name="supportedMediaTypes">
+			<list>
+				<value>text/plain;charset=UTF-8</value>
+			</list>
+		</property>
+	</bean>
+	<bean id="jsonFilter" class="com.ambersec.cloud.interfaces.web.extend.JsonFilter"/>
+	<bean id="fastJsonConfig" class="com.alibaba.fastjson.support.config.FastJsonConfig">
+		<!-- Default charset -->
+		<property name="charset" value="UTF-8" />
+		<!-- Default dateFormat -->
+		<property name="dateFormat" value="yyyy-MM-dd HH:mm:ss" />
+		<!-- serializerFeatures -->
+		<property name="serializerFeatures">
+            <list>
+                <value>DisableCircularReferenceDetect</value>
+                <value>WriteMapNullValue</value>
+                <value>WriteNullStringAsEmpty</value>
+                <value>WriteNullNumberAsZero</value>
+            </list>
+		</property>
+		<property name="serializeFilters">
+			<list>
+				<ref bean="jsonFilter"/>
+			</list>
+		</property>
+	</bean>
+
+
+	<bean id="fastJsonHttpMessageConverter"
+		  class="com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter">
+		<property name="supportedMediaTypes">
+			<list>
+				<value>application/json;charset=UTF-8</value>
+				<value>text/html;charset=UTF-8</value>
+			</list>
+		</property>
+		<property name="fastJsonConfig" ref="fastJsonConfig" />
+	</bean>
+
+	<bean id="marshallingHttpMessageConverter"
+		  class="org.springframework.http.converter.xml.MarshallingHttpMessageConverter">
+		<property name="marshaller" ref="castorMarshaller" />
+		<property name="unmarshaller" ref="castorMarshaller" />
+		<!--<property name="supportedMediaTypes">-->
+			<!--<list>-->
+				<!--<value>text/xml;charset=UTF-8</value>-->
+				<!--<value>application/xml;charset=UTF-8</value>-->
+			<!--</list>-->
+		<!--</property>-->
+	</bean>
+	<!-- 返回类型定义 -->
+	<util:list id="messageConverters">
+		<ref bean="stringHttpMessageConverter" />
+		<ref bean="fastJsonHttpMessageConverter" />
+		<ref bean="marshallingHttpMessageConverter" />
+	</util:list>
+	<bean id="castorMarshaller" class="org.springframework.oxm.castor.CastorMarshaller" />
+    <!-- REST中根据URL后缀自动判定Content-Type及相应的View -->
+	<bean id="contentNegotiationManager" class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">
+	    <property name="mediaTypes" >
+	        <map> 
+                <entry key="xml" value="application/xml"/> 
+                <entry key="json" value="application/json"/> 
+            </map>
+	    </property>
+        <property name="ignoreAcceptHeader" value="true"/>
+        <property name="favorPathExtension" value="true"/>
+	</bean>
+
+	<!-- validation start-->
+	<!--<mvc:annotation-driven validator="validator" conversion-service="conversion-service" />-->
+
+	<!--<bean id="validator" class="org.springframework.validation.beanvalidation.LocalValidatorFactoryBean">-->
+		<!--<property name="providerClass"  value="org.hibernate.validator.HibernateValidator"/>-->
+		<!--<property name="validationMessageSource" ref="validatemessageSource"/>-->
+	<!--</bean>-->
+	<!--<bean id="conversion-service" class="org.springframework.format.support.FormattingConversionServiceFactoryBean" />-->
+	<!--<bean id="validatemessageSource" class="org.springframework.context.support.ReloadableResourceBundleMessageSource">-->
+		<!--<property name="basename" value="message"/>-->
+		<!--<property name="fileEncodings" value="utf-8"/>-->
+		<!--<property name="cacheSeconds" value="120"/>-->
+	<!--</bean>-->
+	<!-- validation end-->
+
+	<!-- 对静态资源文件的访问， 将无法mapping到Controller的path交给default servlet handler处理 -->
+	<mvc:default-servlet-handler />
+	
+	<!-- 静态资源映射 -->
+    <mvc:resources mapping="/static/**" location="/static/" cache-period="31536000"/>
+	
+</beans>
